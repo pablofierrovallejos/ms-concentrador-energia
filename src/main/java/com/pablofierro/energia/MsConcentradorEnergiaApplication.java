@@ -10,9 +10,9 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -30,6 +30,9 @@ public class MsConcentradorEnergiaApplication {
 	@Autowired
 	private IMedicionService medicionService;
 	
+	@Value("${app.scheduled.enabled:false}")
+	private boolean scheduledEnabled;
+	
 	public static void main(String[] args) {
 		SpringApplication.run(MsConcentradorEnergiaApplication.class, args);
 	}
@@ -43,6 +46,12 @@ public class MsConcentradorEnergiaApplication {
 	
 	@Scheduled(fixedRate = 15000)
 	public void getProductObjects() {
+		
+		// Verificar si el scheduled está habilitado
+		if (!scheduledEnabled) {
+			return; // Si está deshabilitado, salir del método sin ejecutar nada
+		}
+		
 		//RestTemplate restTemplate = new RestTemplate(getClientHttpRequestFactory());
 		//RestTemplate restTemplate = new RestTemplate();
 
@@ -99,16 +108,7 @@ public class MsConcentradorEnergiaApplication {
 			e.printStackTrace();
 		}
 		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+		// Código EweLink
 	    Gson gson = new Gson();
 	    EweLink eweLink = new EweLink("us", "pablofierrovallejos@gmail.com", "96552333Aa", "+263",60);
 
@@ -180,21 +180,9 @@ public class MsConcentradorEnergiaApplication {
 	        Thread.sleep(5000);
 	        System.out.println(eweLink.setDeviceStatus("1000f40d35", "off"));
 
-
-
-
 	    } catch (Exception e) {
 	        e.printStackTrace();
 	    }
-		
-		
-		
-		
-		
-		
-		
-		
-
 	}
 	
 	public String replacetag(String sin) {
