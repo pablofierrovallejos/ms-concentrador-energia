@@ -1,10 +1,9 @@
 package com.pablofierro.energia.controllers;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,15 +15,19 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pablofierro.energia.models.entity.Estadistica;
 import com.pablofierro.energia.models.entity.EstadisticaMulti;
 import com.pablofierro.energia.models.entity.Medicionenergia;
+import com.pablofierro.energia.models.entity.MedicionenergiaActual;
 import com.pablofierro.energia.models.service.IEstadisticas;
 import com.pablofierro.energia.models.service.IEstadisticasMulti;
 import com.pablofierro.energia.models.service.IMedicionService;
+import com.pablofierro.energia.models.service.IMedicionActualService;
 
 
 @RestController
 public class MeasController {
 	@Autowired
 	private IMedicionService medicionService;
+	@Autowired
+	private IMedicionActualService medicionActualService;
 	@Autowired
 	private IEstadisticas estadisticameasService;
 	@Autowired
@@ -37,9 +40,26 @@ public class MeasController {
 	}
 	
 	@GetMapping("/consultar-estadistica/{snodo}/{sfecha}")
-	public ResponseEntity<List<Estadistica>> consultarEstadisticaEnergy(@PathVariable String snodo, @PathVariable String sfecha){
-		System.out.println("/consultar-estadistica");
-		return ResponseEntity.ok(estadisticameasService.consultarEstadistica(snodo, sfecha));
+	public ResponseEntity<Medicionenergia> consultarEstadisticaEnergy(@PathVariable String snodo, @PathVariable String sfecha){
+		System.out.println("[V2 ULTRA FAST] /consultar-estadistica - Última medición nodo: " + snodo);
+		// Query ULTRA RÁPIDA desde tabla con solo 4 registros (busca por PK)
+		MedicionenergiaActual actual = medicionActualService.findById(snodo).orElse(null);
+		if (actual == null) {
+			return ResponseEntity.notFound().build();
+		}
+		
+		// Mapear a la entidad original para compatibilidad con frontend
+		Medicionenergia medicion = new Medicionenergia();
+		medicion.setIdregistro(actual.getIdregistro());
+		medicion.setNombrenodo(actual.getNombrenodo());
+		medicion.setUptime(actual.getUptime());
+		medicion.setVolts(actual.getVolts());
+		medicion.setCurrent(actual.getCurrent());
+		medicion.setPower(actual.getPower());
+		medicion.setEnergy(actual.getEnergy());
+		medicion.setFechameas(actual.getFechameas());
+		
+		return ResponseEntity.ok(medicion);
 	}
 	
 	

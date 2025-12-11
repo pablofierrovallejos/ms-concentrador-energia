@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  ms-concentrador-local:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-concentrador-local
+    image: ms-concentrador-energia:local
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      # Configuración de dispositivos Tasmota
+      - MODBUS_DEVICES=192.168.2.221,192.168.2.77,192.168.2.26,192.168.2.163
+      - MODBUS_POLLING_INTERVAL=15000
+      - TASMOTA_TIMEOUT=5000
+      # URL del servidor cloud (CAMBIAR POR TU IP CLOUD REAL)
+      - CLOUD_ENDPOINT_URL=http://TU_IP_CLOUD:8080/api/energia/recibir-mediciones
+    ports:
+      - "8080:8080"
+    networks:
+      - energia-network
+    restart: unless-stopped
+    # Modo red host para acceder a dispositivos en red local
+    # Descomentar si es necesario:
+    # network_mode: "host"
+
+networks:
+  energia-network:
+    driver: bridge

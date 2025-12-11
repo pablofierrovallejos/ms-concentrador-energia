@@ -1,0 +1,21 @@
+services:
+  ms-concentrador-cloud:
+    image: 96552333aa/ms-concentrador-energia:latest
+    container_name: ms-concentrador-energia
+    environment:
+      - SPRING_PROFILES_ACTIVE=cloud
+      - SPRING_DATASOURCE_URL=jdbc:mysql://10.128.0.3:3306/db_springboot_cloud?serverTimezone=America/Santiago&allowPublicKeyRetrival=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=sasa
+      - MODBUS_DEVICES=
+      - MODBUS_POLLING_INTERVAL=999999998
+      - SERVER_PORT=8002
+    ports:
+      - "8002:8002"
+    networks:
+      - springcloud
+    restart: unless-stopped
+
+networks:
+  springcloud:
+    external: true  # <-- AGREGAR ESTO

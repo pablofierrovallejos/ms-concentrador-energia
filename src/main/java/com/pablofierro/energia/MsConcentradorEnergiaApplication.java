@@ -2,6 +2,7 @@ package com.pablofierro.energia;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -10,18 +11,17 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import com.github.realzimboguy.ewelink.api.EweLink;
-import com.github.realzimboguy.ewelink.api.model.home.Thing;
-import com.github.realzimboguy.ewelink.api.wss.WssResponse;
-import com.github.realzimboguy.ewelink.api.wss.wssrsp.WssRspMsg;
-import com.google.gson.Gson;
+import com.pablofierro.energia.models.dto.EnergyDataDTO;
 import com.pablofierro.energia.models.service.IMedicionService;
+import com.pablofierro.energia.services.CloudSenderService;
+import com.pablofierro.energia.services.TasmotaReaderService;
 
 @SpringBootApplication
 @EnableScheduling
@@ -30,24 +30,72 @@ public class MsConcentradorEnergiaApplication {
 	@Autowired
 	private IMedicionService medicionService;
 	
+	@Autowired
+	private TasmotaReaderService tasmotaReaderService;
+	
+	@Autowired
+	private CloudSenderService cloudSenderService;
+	
+	@Value("${modbus.devices}")
+	private String modbusDevicesConfig;
+	
+	@Value("${modbus.polling.interval:15000}")
+	private long pollingInterval;
+	
 	public static void main(String[] args) {
+		org.slf4j.Logger logger = LoggerFactory.getLogger(MsConcentradorEnergiaApplication.class);
+		logger.info("╔════════════════════════════════════════════════════════╗");
+		logger.info("║                                                        ║");
+		logger.info("║      MEDICION ENERGIA V2 - ULTRA FAST QUERIES         ║");
+		logger.info("║      Tabla: medicionenergia_actual (4 registros)      ║");
+		logger.info("║                                                        ║");
+		logger.info("╚════════════════════════════════════════════════════════╝");
 		SpringApplication.run(MsConcentradorEnergiaApplication.class, args);
 	}
-
-	public boolean getServiceMeas() {
-
-		getProductObjects();
+	
+	/**
+	 * Scheduler para leer dispositivos Modbus y enviar datos al cloud
+	 * El intervalo se configura en application.properties (modbus.polling.interval)
+	 */
+	@Scheduled(fixedDelayString = "${modbus.polling.interval:15000}")
+	public void readModbusDevicesAndSendToCloud() {
+		org.slf4j.Logger logger = LoggerFactory.getLogger(MsConcentradorEnergiaApplication.class);
 		
-		return true;
+		try {
+			// Obtener lista de dispositivos desde configuración
+			List<String> deviceIps = Arrays.asList(modbusDevicesConfig.split(","));
+			
+			logger.info("=== Iniciando lectura de {} dispositivos Tasmota ===", deviceIps.size());
+			
+			// Leer datos de todos los dispositivos
+			List<EnergyDataDTO> measurements = tasmotaReaderService.readMultipleDevices(deviceIps);
+			
+			if (measurements.isEmpty()) {
+				logger.warn("No se pudieron leer datos de ningún dispositivo");
+				return;
+			}
+			
+			logger.info("Datos leídos de {} dispositivos", measurements.size());
+			
+			// Enviar datos al endpoint en la nube
+			boolean sent = cloudSenderService.sendMeasurements(measurements);
+			
+			if (sent) {
+				logger.info("Mediciones enviadas exitosamente al cloud");
+			} else {
+				logger.error("Error al enviar mediciones al cloud");
+			}
+			
+		} catch (Exception e) {
+			logger.error("Error en el proceso de lectura y envío de datos: {}", e.getMessage(), e);
+		}
 	}
 	
-	@Scheduled(fixedRate = 15000)
-	public void getProductObjects() {
-		//RestTemplate restTemplate = new RestTemplate(getClientHttpRequestFactory());
-		//RestTemplate restTemplate = new RestTemplate();
-
-		//String products  = restTemplate.getForObject(resourceUrl, String.class);
-		
+	// Método desactivado - ya no se usa
+	// @Scheduled(fixedRate = 15000)
+	public void getProductObjects_OLD() {
+		// Este método ya no se ejecuta
+		/*
 		String concentra_Url1 = "http://192.168.18.205";
 		String concentra_Url2 = "http://192.168.18.206";
 		
@@ -186,19 +234,9 @@ public class MsConcentradorEnergiaApplication {
 	    } catch (Exception e) {
 	        e.printStackTrace();
 	    }
-		
-		
-		
-		
-		
-		
-		
+	    */
 		
 
-	}
-	
-	public String replacetag(String sin) {
-			return sin.replace("<p>", "").replace("</p>", "").replace("Uptime:", "").replace("Volts:", "").replace("Current:", "").replace("Power:", "").replace("Energy:", "").trim();
 	}
 	
 }
