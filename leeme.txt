@@ -1,0 +1,14 @@
+Para compilar
+> ./mvnw clean package -DskipTests
+
+Para hacer build contenedor
+> docker build -t 96552333aa/ms-concentrador-energia:latest .
+
+> docker push 96552333aa/ms-concentrador-energia:latest
+
+
+
+Para subir
+> docker-compose -f docker-compose-cloud.yml up -d
+
+

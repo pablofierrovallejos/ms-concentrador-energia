@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import com.pablofierro.energia.services.WebSocketNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,8 @@ public class MeasController {
 	private IEstadisticas estadisticameasService;
 	@Autowired
 	private IEstadisticasMulti estadisticaServiceMulti;
+	@Autowired
+	private WebSocketNotificationService notificationService;
 	
 	@GetMapping("/consultar-measures/{snodo}/{sfecha}")
 	public ResponseEntity<List<Medicionenergia>> consultarMeasuresEnergy(@PathVariable String snodo, @PathVariable String sfecha){
@@ -41,7 +44,8 @@ public class MeasController {
 	
 	@GetMapping("/consultar-estadistica/{snodo}/{sfecha}")
 	public ResponseEntity<Medicionenergia> consultarEstadisticaEnergy(@PathVariable String snodo, @PathVariable String sfecha){
-		System.out.println("[V2 ULTRA FAST] /consultar-estadistica - Última medición nodo: " + snodo);
+		System.out.println("[V2 ULTRA FAST + WEBSOCKET] /consultar-estadistica - Última medición nodo: " + snodo);
+		
 		// Query ULTRA RÁPIDA desde tabla con solo 4 registros (busca por PK)
 		MedicionenergiaActual actual = medicionActualService.findById(snodo).orElse(null);
 		if (actual == null) {
@@ -58,6 +62,10 @@ public class MeasController {
 		medicion.setPower(actual.getPower());
 		medicion.setEnergy(actual.getEnergy());
 		medicion.setFechameas(actual.getFechameas());
+		
+		// NUEVO: Enviar notificación WebSocket al frontend
+		// Los clientes suscritos recibirán esta actualización automáticamente
+		notificationService.notificarCambioEstadistica(snodo, sfecha, "Consulta de estadística realizada");
 		
 		return ResponseEntity.ok(medicion);
 	}
