@@ -27,7 +27,7 @@ import com.pablofierro.energia.services.TasmotaReaderService;
 @EnableScheduling
 public class MsConcentradorEnergiaApplication {
 
-	@Autowired
+	@Autowired(required = false)
 	private IMedicionService medicionService;
 	
 	@Autowired
@@ -38,6 +38,9 @@ public class MsConcentradorEnergiaApplication {
 	
 	@Value("${modbus.devices}")
 	private String modbusDevicesConfig;
+	
+	@Value("${solis.inverter.ip:}")
+	private String solisInverterIp;
 	
 	@Value("${modbus.polling.interval:15000}")
 	private long pollingInterval;
@@ -70,12 +73,27 @@ public class MsConcentradorEnergiaApplication {
 			// Leer datos de todos los dispositivos
 			List<EnergyDataDTO> measurements = tasmotaReaderService.readMultipleDevices(deviceIps);
 			
+			// Leer datos del inversor Solis Datalogger si está configurado
+			if (solisInverterIp != null && !solisInverterIp.trim().isEmpty()) {
+				try {
+					logger.info("Leyendo datos del inversor Solis Datalogger en {}", solisInverterIp);
+					EnergyDataDTO solarData = tasmotaReaderService.readSolarInverterData(solisInverterIp);
+					if (solarData != null) {
+						// Agregar siempre, incluso si los datos son null (para debug)
+						measurements.add(solarData);
+						logger.info("Datos del inversor Solis agregados a la lista");
+					}
+				} catch (Exception e) {
+					logger.error("Error leyendo inversor Solis, continuando con otros dispositivos: {}", e.getMessage());
+				}
+			}
+			
 			if (measurements.isEmpty()) {
 				logger.warn("No se pudieron leer datos de ningún dispositivo");
 				return;
 			}
 			
-			logger.info("Datos leídos de {} dispositivos", measurements.size());
+			logger.info("Datos leídos de {} dispositivos en total", measurements.size());
 			
 			// Enviar datos al endpoint en la nube
 			boolean sent = cloudSenderService.sendMeasurements(measurements);

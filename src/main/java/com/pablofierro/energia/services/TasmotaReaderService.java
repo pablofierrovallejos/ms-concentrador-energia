@@ -5,12 +5,19 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class TasmotaReaderService {
@@ -90,5 +97,82 @@ public class TasmotaReaderService {
         }
         
         return dataList;
+    }
+    
+    /**
+     * Lee los datos de energía del inversor solar específico en 192.168.2.72
+     * mediante scraping web con autenticación básica
+     * Extrae: Current power, Yield today, Total yield desde /status.html
+     */
+    public EnergyDataDTO readSolarInverterData(String ipAddress) {
+        EnergyDataDTO data = new EnergyDataDTO();
+        data.setDeviceIp(ipAddress);
+        
+        try {
+            // Construir URL - usar status.html que tiene las variables JavaScript
+            String url = "http://" + ipAddress + "/status.html";
+            
+            // Configurar autenticación básica
+            String auth = "admin:admin";
+            byte[] encodedAuth = Base64.getEncoder().encode(auth.getBytes(StandardCharsets.UTF_8));
+            String authHeader = "Basic " + new String(encodedAuth);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            
+            // Realizar petición HTTP con autenticación
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                String html = response.getBody();
+                
+                // Extraer "Current power" desde la variable JavaScript webdata_now_p
+                // Formato: var webdata_now_p = "2050";
+                Pattern currentPowerPattern = Pattern.compile("var\\s+webdata_now_p\\s*=\\s*\"([\\d.]+)\"", Pattern.CASE_INSENSITIVE);
+                Matcher currentPowerMatcher = currentPowerPattern.matcher(html);
+                if (currentPowerMatcher.find()) {
+                    String value = currentPowerMatcher.group(1);
+                    data.setActivePower(Double.parseDouble(value));
+                    logger.info("Current power encontrado: {} W", value);
+                } else {
+                    logger.warn("No se encontró variable 'webdata_now_p' en el HTML del inversor");
+                }
+                
+                // Extraer "Yield today" desde la variable JavaScript webdata_today_e
+                // Formato: var webdata_today_e = "23.20";
+                Pattern yieldTodayPattern = Pattern.compile("var\\s+webdata_today_e\\s*=\\s*\"([\\d.]+)\"", Pattern.CASE_INSENSITIVE);
+                Matcher yieldTodayMatcher = yieldTodayPattern.matcher(html);
+                if (yieldTodayMatcher.find()) {
+                    String value = yieldTodayMatcher.group(1);
+                    data.setEnergyToday(Double.parseDouble(value));
+                    logger.info("Yield today encontrado: {} kWh", value);
+                } else {
+                    logger.warn("No se encontró variable 'webdata_today_e' en el HTML del inversor");
+                }
+                
+                // Extraer "Total yield" desde la variable JavaScript webdata_total_e
+                // Formato: var webdata_total_e = "12108.0";
+                Pattern totalYieldPattern = Pattern.compile("var\\s+webdata_total_e\\s*=\\s*\"([\\d.]+)\"", Pattern.CASE_INSENSITIVE);
+                Matcher totalYieldMatcher = totalYieldPattern.matcher(html);
+                if (totalYieldMatcher.find()) {
+                    String value = totalYieldMatcher.group(1);
+                    data.setEnergyTotal(Double.parseDouble(value));
+                    logger.info("Total yield encontrado: {} kWh", value);
+                } else {
+                    logger.warn("No se encontró variable 'webdata_total_e' en el HTML del inversor");
+                }
+                
+                logger.info("Datos leídos del inversor solar: {} - Power: {}W, Today: {}kWh, Total: {}kWh", 
+                    ipAddress, data.getActivePower(), data.getEnergyToday(), data.getEnergyTotal());
+            } else {
+                logger.warn("Respuesta no válida del inversor solar {}", ipAddress);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error leyendo datos del inversor solar {}: {}", ipAddress, e.getMessage(), e);
+        }
+        
+        return data;
     }
 }

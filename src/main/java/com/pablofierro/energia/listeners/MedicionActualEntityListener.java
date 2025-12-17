@@ -5,6 +5,7 @@ import com.pablofierro.energia.services.WebSocketNotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import jakarta.persistence.PostPersist;
@@ -15,8 +16,10 @@ import jakarta.persistence.PostUpdate;
  * y notifica al frontend vía WebSocket automáticamente
  * 
  * Este listener se ejecuta después de INSERT y UPDATE en la tabla
+ * Solo se activa en perfil cloud
  */
 @Component
+@Profile("cloud")
 public class MedicionActualEntityListener {
     
     private static final Logger logger = LoggerFactory.getLogger(MedicionActualEntityListener.class);

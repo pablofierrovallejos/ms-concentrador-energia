@@ -6,6 +6,7 @@ import com.pablofierro.energia.models.service.IWebSocketNotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,8 +18,10 @@ import java.util.List;
  * Servicio que procesa notificaciones pendientes cada segundo
  * Lee la tabla websocket_notifications y envía notificaciones WebSocket
  * a los clientes suscritos cuando detecta cambios en la base de datos
+ * Solo se activa cuando hay DataSource configurado (perfil cloud)
  */
 @Service
+@Profile("cloud")
 public class WebSocketNotificationProcessor {
     
     private static final Logger logger = LoggerFactory.getLogger(WebSocketNotificationProcessor.class);
@@ -69,12 +72,10 @@ public class WebSocketNotificationProcessor {
             // Enviar notificación WebSocket
             webSocketService.notificarNuevaMedicion(notif.getNombrenodo(), medicion);
             
-            // Marcar como procesada
-            notif.setProcesado(true);
-            notif.setFechaProcesado(new Date());
-            notificationRepository.save(notif);
+            // Eliminar inmediatamente después de procesar (no necesitamos histórico)
+            notificationRepository.delete(notif);
             
-            logger.debug("Notificación ID {} procesada exitosamente para nodo {}", 
+            logger.debug("Notificación ID {} procesada y eliminada para nodo {}", 
                         notif.getId(), notif.getNombrenodo());
             
         } catch (Exception e) {
@@ -82,21 +83,5 @@ public class WebSocketNotificationProcessor {
         }
     }
     
-    /**
-     * Limpia notificaciones procesadas antiguas (más de 24 horas)
-     * Se ejecuta cada hora
-     */
-    @Scheduled(fixedRate = 3600000) // Cada hora
-    @Transactional
-    public void limpiarNotificacionesProcesadas() {
-        try {
-            // Eliminar notificaciones procesadas de más de 24 horas
-            int deleted = notificationRepository.deleteProcessedOlderThan24Hours();
-            if (deleted > 0) {
-                logger.info("Limpiadas {} notificaciones procesadas antiguas", deleted);
-            }
-        } catch (Exception e) {
-            logger.warn("Error limpiando notificaciones antiguas: {}", e.getMessage());
-        }
-    }
+
 }

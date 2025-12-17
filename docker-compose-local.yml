@@ -1,14 +1,11 @@
-version: '3.8'
-
 services:
   ms-concentrador-local:
-    build:
-      context: .
-      dockerfile: Dockerfile
     container_name: ms-concentrador-local
-    image: ms-concentrador-energia:local
+    image: 96552333aa/ms-concentrador-energia:localv1
     environment:
       - SPRING_PROFILES_ACTIVE=local
+      # Configuración de dispositivos Tasmota
+      - MODBUS_DEVICES=192.168.2.221,192.168.2.77,192.168.2.26,192.168.2.163
       - MODBUS_POLLING_INTERVAL=15000
       - TASMOTA_TIMEOUT=5000
       # URL del servidor cloud (CAMBIAR POR TU IP CLOUD REAL)

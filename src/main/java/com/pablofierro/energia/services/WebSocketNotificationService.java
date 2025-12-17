@@ -5,6 +5,7 @@ import com.pablofierro.energia.models.entity.MedicionenergiaActual;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -14,8 +15,10 @@ import java.util.Map;
 /**
  * Servicio para enviar notificaciones en tiempo real a través de WebSocket
  * Notifica al frontend cuando hay cambios en las estadísticas de energía
+ * Solo se activa en perfil cloud donde hay base de datos
  */
 @Service
+@Profile("cloud")
 public class WebSocketNotificationService {
     
     private static final Logger logger = LoggerFactory.getLogger(WebSocketNotificationService.class);

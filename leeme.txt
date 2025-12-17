@@ -3,9 +3,10 @@ Para compilar
 
 Para hacer build contenedor
 > docker build -t 96552333aa/ms-concentrador-energia:latest .
+> docker build -t 96552333aa/ms-concentrador-energia:localv1 .
 
 > docker push 96552333aa/ms-concentrador-energia:latest
-
+docker push 96552333aa/ms-concentrador-energia:localv1 .
 
 
 Para subir

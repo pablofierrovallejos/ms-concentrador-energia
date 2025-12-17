@@ -1,6 +1,7 @@
 package com.pablofierro.energia.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -9,9 +10,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 /**
  * Configuración de WebSocket para notificaciones push al frontend
  * Permite comunicación bidireccional en tiempo real usando STOMP sobre WebSocket
+ * Solo se activa en perfil cloud donde hay base de datos
  */
 @Configuration
 @EnableWebSocketMessageBroker
+@Profile("cloud")
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
