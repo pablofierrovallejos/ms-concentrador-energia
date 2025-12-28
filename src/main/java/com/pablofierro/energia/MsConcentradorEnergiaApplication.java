@@ -42,8 +42,14 @@ public class MsConcentradorEnergiaApplication {
 	@Value("${solis.inverter.ip:}")
 	private String solisInverterIp;
 	
-	@Value("${modbus.polling.interval:15000}")
+	@Value("${modbus.polling.interval:30000}")
 	private long pollingInterval;
+	
+	@Value("${temperature.node.t110.enabled:true}")
+	private boolean t110Enabled;
+	
+	@Value("${temperature.node.t110.ip:192.168.2.110}")
+	private String t110Ip;
 	
 	public static void main(String[] args) {
 		org.slf4j.Logger logger = LoggerFactory.getLogger(MsConcentradorEnergiaApplication.class);
@@ -88,6 +94,20 @@ public class MsConcentradorEnergiaApplication {
 				}
 			}
 			
+			// Leer datos del nodo de temperatura T110 si está habilitado
+			if (t110Enabled && t110Ip != null && !t110Ip.trim().isEmpty()) {
+				try {
+					logger.info("Leyendo datos de temperatura del nodo T110 en {}", t110Ip);
+					EnergyDataDTO temperatureData = tasmotaReaderService.readTemperatureNode(t110Ip);
+					if (temperatureData != null) {
+						measurements.add(temperatureData);
+						logger.info("Datos de temperatura del nodo T110 agregados a la lista");
+					}
+				} catch (Exception e) {
+					logger.error("Error leyendo nodo T110, continuando con otros dispositivos: {}", e.getMessage());
+				}
+			}
+			
 			if (measurements.isEmpty()) {
 				logger.warn("No se pudieron leer datos de ningún dispositivo");
 				return;
@@ -96,6 +116,9 @@ public class MsConcentradorEnergiaApplication {
 			logger.info("Datos leídos de {} dispositivos en total", measurements.size());
 			
 			// Enviar datos al endpoint en la nube
+
+
+
 			boolean sent = cloudSenderService.sendMeasurements(measurements);
 			
 			if (sent) {

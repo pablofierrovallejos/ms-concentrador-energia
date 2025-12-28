@@ -175,4 +175,44 @@ public class TasmotaReaderService {
         
         return data;
     }
+    
+    /**
+     * Lee los datos de temperatura del nodo T110 en 192.168.2.110
+     * Endpoint: http://192.168.2.110/api/simple
+     * Response: {"temp1": 32.38}
+     */
+    public EnergyDataDTO readTemperatureNode(String ipAddress) {
+        EnergyDataDTO data = new EnergyDataDTO();
+        data.setDeviceIp(ipAddress);
+        
+        try {
+            // Construir URL del API
+            String url = "http://" + ipAddress + "/api/simple";
+            
+            // Realizar petición HTTP
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                // Parsear JSON de respuesta
+                JSONObject json = new JSONObject(response.getBody());
+                
+                // Extraer temperatura
+                double temperature = json.optDouble("temp1", 0.0);
+                
+                // Almacenar temperatura en un campo apropiado del DTO
+                // Usar el campo voltage para temperatura por ahora
+                data.setVoltage(temperature);
+                data.setAddress(110); // Identificador del nodo T110
+                
+                logger.info("Temperatura leída exitosamente del nodo T110 ({}): {} °C", ipAddress, temperature);
+            } else {
+                logger.warn("Respuesta no válida del nodo de temperatura {}", ipAddress);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error leyendo temperatura del nodo {}: {}", ipAddress, e.getMessage());
+        }
+        
+        return data;
+    }
 }

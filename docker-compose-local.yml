@@ -6,7 +6,7 @@ services:
       - SPRING_PROFILES_ACTIVE=local
       # Configuración de dispositivos Tasmota
       - MODBUS_DEVICES=192.168.2.221,192.168.2.77,192.168.2.26,192.168.2.163
-      - MODBUS_POLLING_INTERVAL=15000
+      - MODBUS_POLLING_INTERVAL=30000
       - TASMOTA_TIMEOUT=5000
       # URL del servidor cloud (CAMBIAR POR TU IP CLOUD REAL)
       - CLOUD_ENDPOINT_URL=http://35.209.63.29:8002/api/energia/recibir-mediciones

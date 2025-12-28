@@ -2,7 +2,9 @@ package com.pablofierro.energia.controllers;
 
 import com.pablofierro.energia.models.dto.EnergyDataDTO;
 import com.pablofierro.energia.models.entity.Medicionenergia;
+import com.pablofierro.energia.models.entity.MedicionTemperatura;
 import com.pablofierro.energia.models.service.IMedicionService;
+import com.pablofierro.energia.models.service.IMedicionTemperaturaService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,9 @@ public class EnergyController {
     
     @Autowired
     private IMedicionService medicionService;
+    
+    @Autowired(required = false)
+    private IMedicionTemperaturaService medicionTemperaturaService;
     
     /**
      * Endpoint para recibir mediciones desde la instancia local
@@ -67,6 +72,7 @@ public class EnergyController {
     
     /**
      * Inserta una medición en la base de datos
+     * Detecta automáticamente si es un nodo de temperatura (T110) o de energía
      */
     private void insertarMedicionEnBD(EnergyDataDTO dto) {
         SimpleDateFormat formatter = new SimpleDateFormat("yyHHmmss");
@@ -76,13 +82,26 @@ public class EnergyController {
         // Extraer último octeto de la IP para nombre de nodo: 192.168.2.221 -> T221
         String lastOctet = dto.getDeviceIp().substring(dto.getDeviceIp().lastIndexOf('.') + 1);
         String nombrenodo = "T" + lastOctet;
-        String volts = String.valueOf(dto.getVoltage());
-        String current = String.valueOf(dto.getCurrent());
-        String power = String.valueOf(dto.getActivePower());
-        String energy = String.valueOf(dto.getEnergyTotal());
         
-        // Usar el servicio existente para agregar medición
-        medicionService.agregarMedicion(uptime, nombrenodo, uptime, volts, current, power, energy);
+        // Detectar si es un nodo de temperatura (T110 o address = 110)
+        boolean esNodoTemperatura = "T110".equals(nombrenodo) || dto.getAddress() == 110;
+        
+        if (esNodoTemperatura && medicionTemperaturaService != null) {
+            // Insertar en tabla de temperatura
+            // El valor de temperatura está almacenado en el campo voltage del DTO
+            Double temperatura = dto.getVoltage();
+            medicionTemperaturaService.agregarMedicionTemperatura(nombrenodo, temperatura, dto.getDeviceIp());
+            logger.info("Medición de temperatura insertada: {} - {}°C", nombrenodo, temperatura);
+        } else {
+            // Insertar en tabla de energía (comportamiento existente)
+            String volts = String.valueOf(dto.getVoltage());
+            String current = String.valueOf(dto.getCurrent());
+            String power = String.valueOf(dto.getActivePower());
+            String energy = String.valueOf(dto.getEnergyTotal());
+            
+            medicionService.agregarMedicion(uptime, nombrenodo, uptime, volts, current, power, energy);
+            logger.info("Medición de energía insertada: {}", nombrenodo);
+        }
     }
     
     /**
@@ -107,5 +126,37 @@ public class EnergyController {
         
         List<Medicionenergia> mediciones = medicionService.consultarMeasEnergia(nodoName, fecha);
         return ResponseEntity.ok(mediciones);
+    }
+    
+    /**
+     * Endpoint para obtener las últimas mediciones de temperatura de un nodo
+     */
+    @GetMapping("/temperatura/ultimas/{nombrenodo}")
+    public ResponseEntity<List<MedicionTemperatura>> obtenerUltimasTemperaturas(
+            @PathVariable String nombrenodo,
+            @RequestParam(defaultValue = "10") int limit) {
+        
+        if (medicionTemperaturaService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        
+        List<MedicionTemperatura> temperaturas = medicionTemperaturaService.obtenerUltimasMediciones(nombrenodo, limit);
+        return ResponseEntity.ok(temperaturas);
+    }
+    
+    /**
+     * Endpoint para obtener temperaturas por fecha
+     */
+    @GetMapping("/temperatura/{nombrenodo}/{fecha}")
+    public ResponseEntity<List<MedicionTemperatura>> obtenerTemperaturasPorFecha(
+            @PathVariable String nombrenodo,
+            @PathVariable String fecha) {
+        
+        if (medicionTemperaturaService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        
+        List<MedicionTemperatura> temperaturas = medicionTemperaturaService.obtenerMedicionesPorFecha(nombrenodo, fecha);
+        return ResponseEntity.ok(temperaturas);
     }
 }
