@@ -2,6 +2,7 @@ package com.pablofierro.energia.services;
 
 import com.pablofierro.energia.models.entity.Medicionenergia;
 import com.pablofierro.energia.models.entity.MedicionenergiaActual;
+import com.pablofierro.energia.models.entity.MedicionTemperatura;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,6 +79,31 @@ public class WebSocketNotificationService {
             logger.info("Notificación de cambio enviada para nodo: {} fecha: {}", nodo, fecha);
         } catch (Exception e) {
             logger.error("Error enviando notificación de cambio: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Notifica al frontend sobre una nueva medición de temperatura
+     * Los clientes suscritos a /topic/temperatura/{nodo} recibirán esta notificación
+     * 
+     * @param nodo Nombre del nodo (ej: T110)
+     * @param medicion Datos de temperatura
+     */
+    public void notificarNuevaTemperatura(String nodo, MedicionTemperatura medicion) {
+        try {
+            Map<String, Object> notificacion = new HashMap<>();
+            notificacion.put("tipo", "NUEVA_TEMPERATURA");
+            notificacion.put("nodo", nodo);
+            notificacion.put("timestamp", System.currentTimeMillis());
+            notificacion.put("data", medicion);
+            
+            // Enviar a topic específico de temperatura
+            String destination = "/topic/temperatura/" + nodo;
+            messagingTemplate.convertAndSend(destination, notificacion);
+            
+            logger.info("Notificación de temperatura enviada vía WebSocket para nodo: {} a {}", nodo, destination);
+        } catch (Exception e) {
+            logger.error("Error enviando notificación WebSocket de temperatura para nodo {}: {}", nodo, e.getMessage());
         }
     }
 }
