@@ -84,23 +84,26 @@ public class EnergyController {
         String nombrenodo = "T" + lastOctet;
         
         // Detectar si es un nodo de temperatura (T110 o address = 110)
-        boolean esNodoTemperatura = "T110".equals(nombrenodo) || dto.getAddress() == 110;
+        // Validar que address no sea null antes de comparar
+        boolean esNodoTemperatura = "T110".equals(nombrenodo) || 
+                                   (dto.getAddress() != null && dto.getAddress() == 110);
         
         if (esNodoTemperatura && medicionTemperaturaService != null) {
             // Insertar en tabla de temperatura
             // El valor de temperatura está almacenado en el campo voltage del DTO
-            Double temperatura = dto.getVoltage();
+            Double temperatura = dto.getVoltage() != null ? dto.getVoltage() : 0.0;
             medicionTemperaturaService.agregarMedicionTemperatura(nombrenodo, temperatura, dto.getDeviceIp());
             logger.info("Medición de temperatura insertada: {} - {}°C", nombrenodo, temperatura);
         } else {
             // Insertar en tabla de energía (comportamiento existente)
-            String volts = String.valueOf(dto.getVoltage());
-            String current = String.valueOf(dto.getCurrent());
-            String power = String.valueOf(dto.getActivePower());
-            String energy = String.valueOf(dto.getEnergyTotal());
+            // Usar valores por defecto de "0.0" para campos null (ej: inversor solar sin voltage/current)
+            String volts = dto.getVoltage() != null ? String.valueOf(dto.getVoltage()) : "0.0";
+            String current = dto.getCurrent() != null ? String.valueOf(dto.getCurrent()) : "0.0";
+            String power = dto.getActivePower() != null ? String.valueOf(dto.getActivePower()) : "0.0";
+            String energy = dto.getEnergyTotal() != null ? String.valueOf(dto.getEnergyTotal()) : "0.0";
             
             medicionService.agregarMedicion(uptime, nombrenodo, uptime, volts, current, power, energy);
-            logger.info("Medición de energía insertada: {}", nombrenodo);
+            logger.info("Medición de energía insertada: {} - Power: {}W, Energy: {}kWh", nombrenodo, power, energy);
         }
     }
     

@@ -36,6 +36,7 @@ public class TasmotaReaderService {
     /**
      * Lee los datos de energía de un dispositivo Tasmota vía HTTP
      * Endpoint: http://IP/cm?cmnd=Status%208
+     * @return EnergyDataDTO con los datos leídos, o null si falla la lectura
      */
     public EnergyDataDTO readDeviceData(String ipAddress) {
         EnergyDataDTO data = new EnergyDataDTO();
@@ -68,6 +69,7 @@ public class TasmotaReaderService {
                 data.setAddress(energy.optInt("Address", 1));
                 
                 logger.info("Datos leídos exitosamente de dispositivo Tasmota: {}", ipAddress);
+                return data; // Retornar solo si la lectura fue exitosa
             } else {
                 logger.warn("Respuesta no válida de dispositivo {}", ipAddress);
             }
@@ -76,11 +78,12 @@ public class TasmotaReaderService {
             logger.error("Error leyendo datos de dispositivo {}: {}", ipAddress, e.getMessage());
         }
         
-        return data;
+        return null; // Retornar null si hubo error
     }
     
     /**
      * Lee datos de múltiples dispositivos
+     * Solo agrega a la lista los dispositivos que se leyeron exitosamente
      */
     public List<EnergyDataDTO> readMultipleDevices(List<String> ipAddresses) {
         List<EnergyDataDTO> dataList = new ArrayList<>();
@@ -90,6 +93,9 @@ public class TasmotaReaderService {
                 EnergyDataDTO data = readDeviceData(ip);
                 if (data != null) {
                     dataList.add(data);
+                    logger.debug("Dispositivo {} agregado a la lista de mediciones", ip);
+                } else {
+                    logger.warn("Dispositivo {} no se agregó a la lista (lectura fallida)", ip);
                 }
             } catch (Exception e) {
                 logger.error("Error procesando dispositivo {}: {}", ip, e.getMessage());
