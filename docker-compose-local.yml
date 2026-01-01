@@ -1,7 +1,7 @@
 services:
   ms-concentrador-local:
     container_name: ms-concentrador-local
-    image: 96552333aa/ms-concentrador-energia:localv1
+    image: 96552333aa/ms-concentrador-energia:latest
     environment:
       - SPRING_PROFILES_ACTIVE=local
       # Configuración de dispositivos Tasmota
@@ -9,13 +9,31 @@ services:
       - MODBUS_POLLING_INTERVAL=30000
       - TASMOTA_TIMEOUT=5000
       # URL del servidor cloud
-      - CLOUD_ENDPOINT_URL=http://35.209.63.29:8080/api/energia/recibir-mediciones
+      - CLOUD_ENDPOINT_URL=http://35.209.63.29:8002/api/energia/recibir-mediciones
       - SOLIS_INVERTER_IP=192.168.2.72
+      - TZ=America/Santiago
+      # Configuración JVM para evitar OutOfMemory
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+HeapDumpOnOutOfMemoryError
     ports:
       - "8002:8080"
     networks:
       - energia-network
-    restart: unless-stopped
+    restart: always
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    mem_limit: 1536m
+    mem_reservation: 512m
+    cpus: 2.0
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Modo red host para acceder a dispositivos en red local
     # Descomentar si es necesario:
     # network_mode: "host"
