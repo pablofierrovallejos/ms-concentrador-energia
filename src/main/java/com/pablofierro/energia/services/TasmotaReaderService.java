@@ -5,14 +5,17 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -29,8 +32,17 @@ public class TasmotaReaderService {
     @Value("${tasmota.timeout:5000}")
     private int timeout;
 
-    public TasmotaReaderService() {
-        this.restTemplate = new RestTemplate();
+    public TasmotaReaderService(@Value("${tasmota.timeout:5000}") int timeout) {
+        this.timeout = timeout;
+        
+        // Configurar timeouts en el RestTemplate
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(timeout); // Timeout de conexión
+        factory.setReadTimeout(timeout); // Timeout de lectura
+        
+        this.restTemplate = new RestTemplate(factory);
+        
+        logger.info("TasmotaReaderService inicializado con timeout de {}ms", timeout);
     }
 
     /**

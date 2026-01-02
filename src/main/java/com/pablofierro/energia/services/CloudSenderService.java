@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -20,8 +21,16 @@ public class CloudSenderService {
     
     private final RestTemplate restTemplate;
     
-    public CloudSenderService() {
-        this.restTemplate = new RestTemplate();
+    public CloudSenderService(@Value("${tasmota.timeout:5000}") int timeout) {
+        // Configurar timeouts para evitar bloqueos
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(timeout);
+        factory.setReadTimeout(timeout * 2); // Más tiempo para el cloud endpoint
+        
+        this.restTemplate = new RestTemplate(factory);
+        
+        logger.info("CloudSenderService inicializado con timeout de conexión: {}ms, lectura: {}ms", 
+                    timeout, timeout * 2);
     }
     
     /**

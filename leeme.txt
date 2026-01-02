@@ -13,3 +13,11 @@ Para subir
 > docker-compose -f docker-compose-cloud.yml up -d
 
 
+--- ahora se usa una imagen tanto para local como para cloud
+Deploy en LOCAL:
+docker-compose -f docker-compose-local.yml pull
+docker-compose -f docker-compose-local.yml up -d
+
+Deploy en CLOUD:
+docker-compose -f docker-compose-cloud.yml pull
+docker-compose -f docker-compose-cloud.yml up -d
